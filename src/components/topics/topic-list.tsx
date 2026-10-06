@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchTopics } from "@/lib/topics";
 import type { Topic } from "@/types/topic";
@@ -40,7 +39,6 @@ export function TopicList({ topics }: { topics: readonly Topic[] }) {
                   <CardContent className="space-y-1 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="font-semibold">{topic.title}</h2>
-                      <Badge variant="secondary">{topic.level}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{topic.titleEn}</p>
                   </CardContent>
