@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-brand-pink: #ff4d8b;
+  --color-brand-teal: #1a3a3a;
+  --color-brand-lavender: #b8a4ed;
+  --color-brand-peach: #ffb084;
+  --color-brand-ochre: #e8b94a;
+  --color-brand-mint: #a4d4c5;
+  --color-brand-coral: #ff6b5a;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #fffaf0;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #a4d4c5;
+  --secondary-foreground: #0a1a1a;
+  --muted: #f5f0e0;
+  --muted-foreground: #6a6a6a;
+  --accent: #ffb084;
+  --accent-foreground: #0a0a0a;
+  --destructive: #ef4444;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #1a3a3a;
+  --chart-1: #ff4d8b;
+  --chart-2: #1a3a3a;
+  --chart-3: #b8a4ed;
+  --chart-4: #e8b94a;
+  --chart-5: #ff6b5a;
+  --radius: 0.75rem;
+  --sidebar: #fffaf0;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f0e0;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #1a3a3a;
+}
+
+.dark {
+  --background: #0a1a1a;
+  --foreground: #fffaf0;
+  --card: #1a2a2a;
+  --card-foreground: #fffaf0;
+  --popover: #1a2a2a;
+  --popover-foreground: #fffaf0;
+  --primary: #fffaf0;
+  --primary-foreground: #0a1a1a;
+  --secondary: #1a3a3a;
+  --secondary-foreground: #fffaf0;
+  --muted: #1a2a2a;
+  --muted-foreground: #a0a0a0;
+  --accent: #1a3a3a;
+  --accent-foreground: #fffaf0;
+  --destructive: #ef4444;
+  --border: #3a4a4a;
+  --input: #3a4a4a;
+  --ring: #a4d4c5;
+  --chart-1: #ff4d8b;
+  --chart-2: #a4d4c5;
+  --chart-3: #b8a4ed;
+  --chart-4: #e8b94a;
+  --chart-5: #ff6b5a;
+  --sidebar: #0a1a1a;
+  --sidebar-foreground: #fffaf0;
+  --sidebar-primary: #fffaf0;
+  --sidebar-primary-foreground: #0a1a1a;
+  --sidebar-accent: #1a2a2a;
+  --sidebar-accent-foreground: #fffaf0;
+  --sidebar-border: #3a4a4a;
+  --sidebar-ring: #a4d4c5;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
