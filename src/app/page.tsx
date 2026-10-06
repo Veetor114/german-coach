@@ -46,7 +46,6 @@ export default function DashboardPage() {
   const goetheTopics = new Set(history.filter((entry) => entry.category === "goethe").map((entry) => entry.title));
   const completedToday = dailyData.date === today ? Object.values(dailyData.completed ?? {}).filter(Boolean).length : 0;
   const stats = {
-    level: "Not assessed",
     streakDays,
     weeklySpeakingMinutes,
     topicsCompleted: uniqueTopics.size,
@@ -68,7 +67,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Guten Tag!</h1>
-        <p className="text-muted-foreground">Level: {stats.level}</p>
+        <p className="text-muted-foreground">
+          {history.length === 0
+            ? "No practice yet. Start today's practice below."
+            : `${history.length} speaking ${history.length === 1 ? "attempt" : "attempts"} · ${practicedDates.size} ${practicedDates.size === 1 ? "day" : "days"} practiced`}
+        </p>
       </header>
 
       <Card>
