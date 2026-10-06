@@ -14,7 +14,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Shown in the mobile bottom bar. Keep to 5. */
+  /** Shown in the mobile bottom bar. Keep to 8. */
   primary: boolean;
 }
 
