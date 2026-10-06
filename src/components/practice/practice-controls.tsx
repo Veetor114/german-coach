@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "deutsch-coach-practice-v1";
@@ -35,6 +35,24 @@ function speak(text: string, rate = 1) {
   window.speechSynthesis.speak(utterance);
 }
 
+const RECORDING_MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"] as const;
+
+function getSupportedMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined") return undefined;
+  return RECORDING_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+function canRecord(): boolean {
+  return typeof window !== "undefined" && typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
+}
+
+function describeMicError(error: unknown): string {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "Microphone access is blocked. Allow it in your browser settings to record. The timer still works.";
+  if (name === "NotFoundError") return "No microphone found. The timer still works.";
+  return "Couldn't start recording. The timer still works.";
+}
+
 export function PracticeControls({
   title,
   category,
@@ -51,6 +69,105 @@ export function PracticeControls({
   const [finished, setFinished] = useState(false);
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
 
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const sessionRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [recordError, setRecordError] = useState<string | null>(null);
+
+  const stopPlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audioRef.current = null;
+    }
+    setIsPlaying(false);
+  }, []);
+
+  // Throws away the current recording (and any recorder still running).
+  const discardRecording = useCallback(() => {
+    sessionRef.current += 1; // invalidates any in-flight onstop / permission prompt
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      if (recorder.state !== "inactive") recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+    }
+    stopPlayback();
+    chunksRef.current = [];
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setRecordingUrl(null);
+    setIsRecording(false);
+  }, [stopPlayback]);
+
+  // Stops recording but keeps the audio so the learner can listen back.
+  const finishRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    recorderRef.current = null;
+    setIsRecording(false);
+    if (recorder.state === "inactive") {
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    recorder.stop(); // onstop builds the playable blob
+  }, []);
+
+  const beginRecording = useCallback(async () => {
+    setRecordError(null);
+    if (!canRecord()) {
+      setRecordError("Recording isn't supported in this browser. The timer still works.");
+      return;
+    }
+    const session = sessionRef.current;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (sessionRef.current !== session) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      const mimeType = getSupportedMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (sessionRef.current !== session || chunksRef.current.length === 0) return;
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
+        chunksRef.current = [];
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+        setRecordingUrl(url);
+      };
+      recorder.onerror = () => {
+        setRecordError("Recording failed. The timer still works.");
+        setIsRecording(false);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      setRecordError(describeMicError(error));
+    }
+  }, []);
+
+  // Release the microphone and the audio URL when leaving the page.
+  useEffect(() => discardRecording, [discardRecording]);
+
   useEffect(() => {
     if (!running) return;
     const intervalId = window.setInterval(() => {
@@ -60,13 +177,16 @@ export function PracticeControls({
       if (next === 0) {
         setRunning(false);
         setFinished(true);
+        finishRecording();
       }
     }, 1000);
     return () => window.clearInterval(intervalId);
-  }, [running]);
+  }, [running, finishRecording]);
 
   const selectDuration = (seconds: number) => {
     setRunning(false);
+    discardRecording();
+    setRecordError(null);
     setDuration(seconds);
     remainingRef.current = seconds;
     setRemaining(seconds);
@@ -77,6 +197,73 @@ export function PracticeControls({
   const stop = () => {
     setRunning(false);
     setFinished(true);
+    finishRecording();
+  };
+
+  const start = async () => {
+    const recorder = recorderRef.current;
+    if (recorder?.state === "paused") {
+      recorder.resume();
+      setRunning(true);
+      return;
+    }
+    setStarting(true);
+    discardRecording(); // a new attempt replaces the previous recording
+    if (finished || remainingRef.current === 0) {
+      remainingRef.current = duration;
+      setRemaining(duration);
+    }
+    setFinished(false);
+    setSavedRating(null);
+    await beginRecording(); // wait for the mic permission before the clock starts
+    setStarting(false);
+    setRunning(true);
+  };
+
+  const pause = () => {
+    setRunning(false);
+    const recorder = recorderRef.current;
+    if (recorder?.state === "recording") recorder.pause();
+  };
+
+  const reset = () => {
+    setRunning(false);
+    discardRecording();
+    setRecordError(null);
+    remainingRef.current = duration;
+    setRemaining(duration);
+    setFinished(false);
+    setSavedRating(null);
+  };
+
+  const togglePlayback = () => {
+    if (isPlaying) {
+      stopPlayback();
+      return;
+    }
+    if (!recordingUrl) return;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    const audio = new Audio(recordingUrl);
+    const onDone = () => {
+      audioRef.current = null;
+      setIsPlaying(false);
+    };
+    audio.onended = onDone;
+    audio.onerror = () => {
+      onDone();
+      setRecordError("Couldn't play the recording in this browser.");
+    };
+    audioRef.current = audio;
+    setIsPlaying(true);
+    audio.play().catch(() => {
+      onDone();
+      setRecordError("Couldn't play the recording in this browser.");
+    });
+  };
+
+  const hearPrompt = (rate = 1) => {
+    stopPlayback();
+    speak(prompt ?? phrases.join(" "), rate);
   };
 
   const saveRating = (rating: PracticeRating) => {
@@ -105,18 +292,29 @@ export function PracticeControls({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold">Speak aloud</h2>
-          <p className="text-sm text-muted-foreground">Choose a time, speak freely, then reflect.</p>
+          <p className="text-sm text-muted-foreground">Choose a time, press Start and speak. Your voice is recorded so you can listen back.</p>
         </div>
-        {(prompt || phrases.length > 0) && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => speak(prompt ?? phrases.join(" "))} aria-label="Listen to German prompt">
-              <Volume2 aria-hidden /> Listen
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => speak(prompt ?? phrases.join(" "), 0.75)} aria-label="Listen slowly">
-              Slow
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!recordingUrl || isRecording}
+            onClick={togglePlayback}
+            aria-label={isPlaying ? "Stop playing your recording" : "Play your recording"}
+          >
+            {isPlaying ? <Square aria-hidden /> : <Volume2 aria-hidden />} {isPlaying ? "Stop" : "Listen"}
+          </Button>
+          {(prompt || phrases.length > 0) && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => hearPrompt()} aria-label="Hear the German prompt">
+                Hear prompt
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => hearPrompt(0.75)} aria-label="Hear the German prompt slowly">
+                Slow
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Speaking duration">
@@ -160,10 +358,10 @@ export function PracticeControls({
         </output>
         <div className="flex flex-wrap gap-2">
           {running ? (
-            <Button onClick={() => setRunning(false)}><Pause aria-hidden /> Pause</Button>
+            <Button onClick={pause}><Pause aria-hidden /> Pause</Button>
           ) : (
-            <Button onClick={() => { if (remaining === 0) { remainingRef.current = duration; setRemaining(duration); } setFinished(false); setRunning(true); }}>
-              <Play aria-hidden /> Start
+            <Button onClick={start} disabled={starting}>
+              <Play aria-hidden /> {starting ? "Starting…" : "Start"}
             </Button>
           )}
           <Button variant="outline" onClick={stop}><Square aria-hidden /> Stop</Button>
@@ -172,16 +370,25 @@ export function PracticeControls({
             size="icon"
             aria-label="Reset timer"
             title="Reset timer"
-            onClick={() => { setRunning(false); remainingRef.current = duration; setRemaining(duration); setFinished(false); setSavedRating(null); }}
+            onClick={reset}
           >
             <RotateCcw aria-hidden />
           </Button>
         </div>
       </div>
 
+      {isRecording && (
+        <p className="flex items-center gap-2 text-sm font-medium" role="status">
+          <span className={`inline-block size-2.5 rounded-full bg-red-500 ${running ? "animate-pulse" : "opacity-50"}`} aria-hidden />
+          <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
+        </p>
+      )}
+      {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
+
       {finished && (
         <div className="space-y-3 border-t pt-4" aria-live="polite">
           <p className="font-medium">Time to reflect: how did that feel?</p>
+          {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
           <div className="flex flex-wrap gap-2">
             {RATINGS.map((rating) => (
               <Button
