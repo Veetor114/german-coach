@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Check, RotateCcw, Volume2 } from "lucide-react";
+import { Check, RotateCcw, Shuffle, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +11,12 @@ import { speakGerman } from "@/components/practice/practice-controls";
 
 const INTERVAL_DAYS = [1, 3, 7, 14, 30] as const;
 type WordProgress = { repetitions: number; dueAt: string };
-type Word = { id: string; de: string; en: string; topic: string; example: string };
+type Word = { id: string; slug: string; de: string; en: string; topic: string; example: string };
 
 const WORDS: Word[] = TOPICS.flatMap((topic) => topic.options.flatMap((option) =>
   option.vocab.map((word) => ({
     id: `${topic.slug}:${word.de}`,
+    slug: topic.slug,
     de: word.de,
     en: word.en,
     topic: topic.title,
@@ -28,9 +29,27 @@ export function VocabularyReview() {
   const progress = JSON.parse(snapshot) as Record<string, WordProgress>;
   const [seenThisSession, setSeenThisSession] = useState<string[]>([]);
   const [revealed, setRevealed] = useState(false);
+  const [focusSlug, setFocusSlug] = useState<string | null>(null);
   const knownCount = Object.values(progress).filter((item) => item.repetitions >= 3).length;
-  const dueWords = WORDS.filter((word) => !seenThisSession.includes(word.id) && (!progress[word.id] || new Date(progress[word.id].dueAt) <= new Date()));
+  const isDue = (word: Word) => !seenThisSession.includes(word.id) && (!progress[word.id] || new Date(progress[word.id].dueAt) <= new Date());
+  const focusTopic = focusSlug ? TOPICS.find((topic) => topic.slug === focusSlug) : undefined;
+  const dueWords = WORDS.filter((word) => (!focusSlug || word.slug === focusSlug) && isDue(word));
   const current = dueWords[0];
+
+  const pickRandomTopic = () => {
+    const others = TOPICS.filter((topic) => topic.slug !== focusSlug);
+    const withDueWords = others.filter((topic) => WORDS.some((word) => word.slug === topic.slug && isDue(word)));
+    const pool = withDueWords.length > 0 ? withDueWords : others;
+    const next = pool[Math.floor(Math.random() * pool.length)];
+    if (!next) return;
+    setFocusSlug(next.slug);
+    setRevealed(false);
+  };
+
+  const showAllTopics = () => {
+    setFocusSlug(null);
+    setRevealed(false);
+  };
 
   const rate = (remembered: boolean) => {
     if (!current) return;
@@ -50,9 +69,18 @@ export function VocabularyReview() {
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
         <div className="space-y-1"><CardTitle>Practice vocabulary from your topics</CardTitle><p className="text-sm text-muted-foreground">Words come from the speaking situations you study. Review again sooner when a word feels difficult.</p></div>
-        <Badge variant="secondary">{knownCount} mastered</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={pickRandomTopic}><Shuffle aria-hidden /> Random topic</Button>
+          <Badge variant="secondary">{knownCount} mastered</Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {focusTopic && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>Topic: <span className="font-medium">{focusTopic.title}</span></span>
+            <Button size="sm" variant="ghost" onClick={showAllTopics}>All topics</Button>
+          </div>
+        )}
         {current ? (
           <div className="rounded-lg bg-muted/70 p-4">
             <p className="text-xs font-semibold uppercase text-muted-foreground">{current.topic}</p>
