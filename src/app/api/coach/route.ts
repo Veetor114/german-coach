@@ -1,6 +1,36 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
+// Image analysis can take longer than the default serverless timeout.
+export const maxDuration = 30;
+
+// Best-effort per-IP limit so one visitor cannot use up the shared Gemini quota.
+// Serverless instances do not share memory, so this is a safety net, not a hard cap.
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const recent = (requestLog.get(ip) ?? []).filter((time) => now - time < RATE_LIMIT_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestLog.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  requestLog.set(ip, recent);
+  if (requestLog.size > 5000) {
+    for (const [key, times] of requestLog) {
+      if (times.every((time) => now - time >= RATE_LIMIT_WINDOW_MS)) requestLog.delete(key);
+    }
+  }
+  return false;
+}
+
+function clientIp(request: Request): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+}
+
 type CoachAction = "image" | "conversation" | "feedback" | "simplify";
 type ChatRole = "user" | "assistant";
 
@@ -24,6 +54,13 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "AI coaching is not configured. Add GEMINI_API_KEY to the server environment and restart the app." },
       { status: 503 },
+    );
+  }
+
+  if (isRateLimited(clientIp(request))) {
+    return NextResponse.json(
+      { error: "You have used the AI coach a lot in a short time. Please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": String(RATE_LIMIT_WINDOW_MS / 1000) } },
     );
   }
 
@@ -90,6 +127,8 @@ export async function POST(request: Request) {
         systemInstruction: SYSTEM_PROMPTS[body.action],
         temperature: 0.6,
         maxOutputTokens: 1600,
+        // Gemini 2.5 Flash "thinking" tokens count against maxOutputTokens and can leave the reply empty or cut off.
+        ...(/2\.5-flash/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
     });
     const content = response.text?.trim();
@@ -102,6 +141,9 @@ export async function POST(request: Request) {
         { error: "Google rejected GEMINI_API_KEY. Check that it is an active Google AI Studio key with Gemini API access, then restart the app." },
         { status: 503 },
       );
+    }
+    if (error instanceof Error && /429|quota|rate limit|resource_exhausted/i.test(error.message)) {
+      return NextResponse.json({ error: "The AI coach is busy right now. Please try again in a minute." }, { status: 429 });
     }
     return NextResponse.json({ error: "Could not connect to the AI service." }, { status: 502 });
   }
