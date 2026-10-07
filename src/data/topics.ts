@@ -1,4 +1,5 @@
 import type { Topic } from "@/types/topic";
+import { translateVocab } from "@/data/vocab-translations";
 
 const CORE_TOPICS: readonly Topic[] = [
   {
@@ -788,9 +789,9 @@ function buildAddedTopic(seed: TopicSeed): Topic {
   const options = seed.options.map((option, index) => ({
     ...option,
     vocab: [
-      { de: option.title, en: option.title },
-      { de: seed.keywords[index], en: seed.keywords[index] },
-      { de: seed.keywords[index + 3], en: seed.keywords[index + 3] },
+      { de: option.title, en: translateVocab(option.title) },
+      { de: seed.keywords[index], en: translateVocab(seed.keywords[index]) },
+      { de: seed.keywords[index + 3], en: translateVocab(seed.keywords[index + 3]) },
     ],
   })) as unknown as Topic["options"];
   const [first, second, third] = options;
