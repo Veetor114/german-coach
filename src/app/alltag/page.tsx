@@ -1,7 +1,7 @@
  "use client";
  
  import { useState } from "react";
- import { ArrowRight, Headphones, MapPin } from "lucide-react";
+ import { ArrowRight, Headphones, MapPin, LoaderCircle } from "lucide-react";
  import { PracticeControls } from "@/components/practice/practice-controls";
  import { Badge } from "@/components/ui/badge";
  import { Button } from "@/components/ui/button";
