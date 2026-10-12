@@ -70,6 +70,7 @@ export function PracticeControls({
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const sessionRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -79,6 +80,14 @@ export function PracticeControls({
   const [isPlaying, setIsPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
+
+  // Speech feedback state
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
+  const [transcribedText, setTranscribedText] = useState<string | null>(null);
+  const [speechFeedbackLoading, setSpeechFeedbackLoading] = useState(false);
+  const [speechFeedbackError, setSpeechFeedbackError] = useState<string | null>(null);
+  const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
 
   const stopPlayback = useCallback(() => {
     const audio = audioRef.current;
@@ -102,14 +111,15 @@ export function PracticeControls({
       if (recorder.state !== "inactive") recorder.stop();
       recorder.stream.getTracks().forEach((track) => track.stop());
     }
+
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+
     stopPlayback();
     chunksRef.current = [];
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-    }
-    setRecordingUrl(null);
-    setIsRecording(false);
   }, [stopPlayback]);
 
   // Stops recording but keeps the audio so the learner can listen back.
@@ -118,6 +128,13 @@ export function PracticeControls({
     if (!recorder) return;
     recorderRef.current = null;
     setIsRecording(false);
+
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+
     if (recorder.state === "inactive") {
       recorder.stream.getTracks().forEach((track) => track.stop());
       return;
@@ -157,6 +174,42 @@ export function PracticeControls({
         setRecordError("Recording failed. The timer still works.");
         setIsRecording(false);
       };
+
+      // Initialize speech recognition for real-time transcription
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'de-DE';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event) => {
+          if (event.results.length > 0) {
+            const transcript = event.results[0][0].transcript;
+            setTranscribedText(transcript);
+            setTranscribeError(null);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          setTranscribeError(`Speech recognition error: ${event.error}`);
+        };
+
+        recognition.onend = () => {
+          // Speech recognition ended, try to restart if still recording
+          if (isRecording) {
+            setTimeout(() => {
+              if (isRecording) {
+                recognition.start();
+              }
+            }, 100);
+          }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
+
       recorderRef.current = recorder;
       recorder.start();
       setIsRecording(true);
@@ -234,6 +287,14 @@ export function PracticeControls({
     setRemaining(duration);
     setFinished(false);
     setSavedRating(null);
+
+    // Clear transcribed text and speech recognition state
+    setTranscribedText(null);
+    setTranscribeError(null);
+    setSpeechFeedback(null);
+    setSpeechFeedbackError(null);
+    setSpeechFeedbackLoading(false);
+    setTranscribing(false);
   };
 
   const togglePlayback = () => {
@@ -281,6 +342,89 @@ export function PracticeControls({
       setSavedRating(rating);
     } catch {
       setSavedRating(rating);
+    }
+  };
+
+  const transcribeAudio = async () => {
+    if (!recordingUrl || transcribing) return;
+
+    setTranscribing(true);
+    setTranscribeError(null);
+    setTranscribedText(null);
+
+    try {
+      if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+        setTranscribeError('Speech recognition is not supported in this browser.');
+        setTranscribing(false);
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+
+      recognition.lang = 'de-DE';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      return new Promise<string | null>((resolve, reject) => {
+        recognition.onresult = (event) => {
+          if (event.results.length > 0) {
+            const transcript = event.results[0][0].transcript;
+            resolve(transcript);
+          } else {
+            resolve(null);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          reject(new Error(`Speech recognition error: ${event.error}`));
+        };
+
+        recognition.onend = () => {
+          // Clean up
+          recognition.stop();
+        };
+
+        // Start recognition with the audio file
+        recognition.start();
+
+        // We need to play the audio into the microphone for recognition to work
+        // This is a limitation - we can't directly feed an audio file to SpeechRecognition
+        // For a proper implementation, we'd need to send the audio to a speech-to-text API
+        setTranscribeError('Direct audio file transcription is not supported in browser. Please use a speech-to-text API for production use.');
+        setTranscribing(false);
+        resolve(null);
+      });
+    } catch (error) {
+      setTranscribeError(error instanceof Error ? error.message : String(error));
+      setTranscribing(false);
+      setTranscribedText(null);
+    }
+  };
+
+  const requestSpeechFeedback = async () => {
+    if (!transcribedText || speechFeedbackLoading) return;
+
+    setSpeechFeedbackLoading(true);
+    setSpeechFeedbackError(null);
+    setSpeechFeedback(null);
+
+    try {
+      const response = await fetch("/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "feedback",
+          message: `Spoken response: ${transcribedText}`,
+        }),
+      });
+      const result = await response.json() as { content?: string; error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Could not get feedback.");
+      setSpeechFeedback(result.content ?? "");
+    } catch (cause) {
+      setSpeechFeedbackError(cause instanceof Error ? cause.message : "Could not get feedback.");
+    } finally {
+      setSpeechFeedbackLoading(false);
     }
   };
 
@@ -383,6 +527,55 @@ export function PracticeControls({
           <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
         </p>
       )}
+
+      {!isRecording && recordingUrl && !transcribing && !speechFeedbackLoading && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={transcribeAudio}
+            disabled={transcribing || speechFeedbackLoading}
+          >
+            {transcribing ? "Transcribing…" : "Transcribe speech"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={requestSpeechFeedback}
+            disabled={!transcribedText || speechFeedbackLoading || transcribing}
+          >
+            {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
+          </Button>
+        </div>
+      )}
+
+      {transcribing && (
+        <p className="text-sm text-muted-foreground">
+          Transcribing audio...<span className="animate-pulse"> …</span>
+        </p>
+      )}
+
+      {speechFeedbackLoading && (
+        <p className="text-sm text-muted-foreground">
+          Getting AI feedback...<span className="animate-pulse"> …</span>
+        </p>
+      )}
+
+      {transcribeError && (
+        <p className="text-sm text-destructive">{transcribeError}</p>
+      )}
+
+      {speechFeedbackError && (
+        <p className="text-sm text-destructive">{speechFeedbackError}</p>
+      )}
+
+      {speechFeedback && (
+        <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
+          <p className="mb-2 font-semibold">AI Feedback on Speech</p>
+          {speechFeedback}
+        </div>
+      )}
+
       {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
 
       {finished && (
