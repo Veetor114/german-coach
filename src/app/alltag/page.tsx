@@ -31,7 +31,34 @@
    const [showAnswer, setShowAnswer] = useState(false);
    const [help, setHelp] = useState(false);
    const [myReply, setMyReply] = useState("");
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState("");
+   const [feedback, setFeedback] = useState("");
    const scenarios = SCENARIOS.filter((scenario) => scenario.category === category);
+
+   const requestFeedback = async () => {
+     if (!myReply.trim() || loading) return;
+     setLoading(true);
+     setError("");
+     setFeedback("");
+     try {
+       const response = await fetch("/api/coach", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           action: "feedback",
+           message: `Alltag scenario: ${scenario.title}\n${scenario.prompt}\nLearner response: ${myReply}`,
+         }),
+       });
+       const result = await response.json() as { content?: string; error?: string };
+       if (!response.ok) throw new Error(result.error ?? "Could not get feedback.");
+       setFeedback(result.content ?? "");
+     } catch (cause) {
+       setError(cause instanceof Error ? cause.message : "Could not get feedback.");
+     } finally {
+       setLoading(false);
+     }
+   };
    const scenario = scenarios[scenarioIndex % scenarios.length];
  
    const changeCategory = (next: string) => {
@@ -80,6 +107,9 @@
                  <Button variant="secondary" onClick={() => setHelp((value) => !value)}>{help ? "Hide hint" : "Help me"}</Button>
                  <Button variant="outline" onClick={() => setShowAnswer((value) => !value)}>{showAnswer ? "Hide answer" : "Show example"}</Button>
                  <Button variant="outline" onClick={() => setEnglish((value) => !value)}>{english ? "🇩🇪 German mode" : "🇬🇧 English support"}</Button>
+                 <Button variant="outline" disabled={!myReply.trim() || loading} onClick={requestFeedback}>
+                   {loading ? <LoaderCircle className="animate-spin" aria-hidden /> : null} Get feedback
+                 </Button>
                </div>
                {help && <p className="rounded-md bg-muted p-3 text-sm"><span className="font-semibold">Try these ideas:</span> {scenario.keywords.join(" · ")}</p>}
                {showAnswer && (
@@ -91,6 +121,11 @@
                  </div>
                )}
              </CardContent>
+
+             {feedback && <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
+               <p className="mb-2 font-semibold">Feedback</p>
+               {feedback}
+             </div>}
            </Card>
  
            <PracticeControls title={scenario.title} category="alltag" prompt={scenario.prompt} phrases={[scenario.reply]} initialMinutes={1} />

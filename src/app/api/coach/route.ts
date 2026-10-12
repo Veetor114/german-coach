@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   ];
 
   try {
-    const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+    const model = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model,
@@ -128,6 +128,7 @@ export async function POST(request: Request) {
         temperature: 0.6,
         maxOutputTokens: 1600,
         // Gemini 2.5 Flash "thinking" tokens count against maxOutputTokens and can leave the reply empty or cut off.
+        // Gemini 3.8 Flash doesn't use the same thinking config structure
         ...(/2\.5-flash/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
     });
