@@ -66,17 +66,18 @@ export function PracticeControls({
   const remainingRef = useRef(initialSeconds);
   const [customMinutes, setCustomMinutes] = useState(String(initialMinutes));
   const [running, setRunning] = useState(false);
-  const [finished, setFinished] = useState(false);
+  [finished, setFinished] = useState(false);
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const sessionRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  [isPlaying, setIsPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
 
