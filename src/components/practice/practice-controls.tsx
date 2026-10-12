@@ -70,7 +70,6 @@ export function PracticeControls({
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const sessionRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -176,14 +175,14 @@ export function PracticeControls({
       };
 
       // Initialize speech recognition for real-time transcription
-      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      if (typeof window !== "undefined" && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.lang = 'de-DE';
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
 
-        recognition.onresult = (event) => {
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
           if (event.results.length > 0) {
             const transcript = event.results[0][0].transcript;
             setTranscribedText(transcript);
@@ -191,7 +190,7 @@ export function PracticeControls({
           }
         };
 
-        recognition.onerror = (event) => {
+        recognition.onerror = (event: SpeechRecognitionError) => {
           setTranscribeError(`Speech recognition error: ${event.error}`);
         };
 
@@ -367,7 +366,7 @@ export function PracticeControls({
       recognition.maxAlternatives = 1;
 
       return new Promise<string | null>((resolve, reject) => {
-        recognition.onresult = (event) => {
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
           if (event.results.length > 0) {
             const transcript = event.results[0][0].transcript;
             resolve(transcript);
@@ -376,7 +375,7 @@ export function PracticeControls({
           }
         };
 
-        recognition.onerror = (event) => {
+        recognition.onerror = (event: SpeechRecognitionError) => {
           reject(new Error(`Speech recognition error: ${event.error}`));
         };
 
