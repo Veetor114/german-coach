@@ -97,6 +97,14 @@ export function PracticeControls({
   const [starting, setStarting] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
 
+  // Speech feedback state
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
+  const [transcribedText, setTranscribedText] = useState<string | null>(null);
+  const [speechFeedbackLoading, setSpeechFeedbackLoading] = useState(false);
+  const [speechFeedbackError, setSpeechFeedbackError] = useState<string | null>(null);
+  const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
+
   const stopPlayback = useCallback(() => {
     const audio = audioRef.current;
     if (audio) {
@@ -128,12 +136,6 @@ export function PracticeControls({
 
     stopPlayback();
     chunksRef.current = [];
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-    }
-    setRecordingUrl(null);
-    setIsRecording(false);
   }, [stopPlayback]);
 
   // Stops recording but keeps the audio so the learner can listen back.
@@ -188,42 +190,6 @@ export function PracticeControls({
         setRecordError("Recording failed. The timer still works.");
         setIsRecording(false);
       };
-
-      // Initialize speech recognition for real-time transcription
-      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'de-DE';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-
-        recognition.onresult = (event) => {
-          if (event.results.length > 0) {
-            const transcript = event.results[0][0].transcript;
-            setTranscribedText(transcript);
-            setTranscribeError(null);
-          }
-        };
-
-        recognition.onerror = (event) => {
-          setTranscribeError(`Speech recognition error: ${event.error}`);
-        };
-
-        recognition.onend = () => {
-          // Speech recognition ended, try to restart if still recording
-          if (isRecording) {
-            setTimeout(() => {
-              if (isRecording) {
-                recognition.start();
-              }
-            }, 100);
-          }
-        };
-
-        recognition.start();
-        recognitionRef.current = recognition;
-      }
-
       recorderRef.current = recorder;
       recorder.start();
       setIsRecording(true);
@@ -270,13 +236,13 @@ export function PracticeControls({
   const start = async () => {
     const recorder = recorderRef.current;
     if (recorder?.state === "paused") {
-      recorder.resume();
+      resonator.resume();
       setRunning(true);
       return;
     }
     setStarting(true);
     discardRecording(); // a new attempt replaces the previous recording
-    if (finished || remainingRef.current === 0) {
+    if (finished || remainingRef.current = 0) {
       remainingRef.current = duration;
       setRemaining(duration);
     }
@@ -356,89 +322,6 @@ export function PracticeControls({
       setSavedRating(rating);
     } catch {
       setSavedRating(rating);
-    }
-  };
-
-  const transcribeAudio = async () => {
-    if (!recordingUrl || transcribing) return;
-
-    setTranscribing(true);
-    setTranscribeError(null);
-    setTranscribedText(null);
-
-    try {
-      if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
-        setTranscribeError('Speech recognition is not supported in this browser.');
-        setTranscribing(false);
-        return;
-      }
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-
-      recognition.lang = 'de-DE';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      return new Promise<string | null>((resolve, reject) => {
-        recognition.onresult = (event) => {
-          if (event.results.length > 0) {
-            const transcript = event.results[0][0].transcript;
-            resolve(transcript);
-          } else {
-            resolve(null);
-          }
-        };
-
-        recognition.onerror = (event) => {
-          reject(new Error(`Speech recognition error: ${event.error}`));
-        };
-
-        recognition.onend = () => {
-          // Clean up
-          recognition.stop();
-        };
-
-        // Start recognition with the audio file
-        recognition.start();
-
-        // We need to play the audio into the microphone for recognition to work
-        // This is a limitation - we can't directly feed an audio file to SpeechRecognition
-        // For a proper implementation, we'd need to send the audio to a speech-to-text API
-        setTranscribeError('Direct audio file transcription is not supported in browser. Please use a speech-to-text API for production use.');
-        setTranscribing(false);
-        resolve(null);
-      });
-    } catch (error) {
-      setTranscribeError(error instanceof Error ? error.message : String(error));
-      setTranscribing(false);
-      setTranscribedText(null);
-    }
-  };
-
-  const requestSpeechFeedback = async () => {
-    if (!transcribedText || speechFeedbackLoading) return;
-
-    setSpeechFeedbackLoading(true);
-    setSpeechFeedbackError(null);
-    setSpeechFeedback(null);
-
-    try {
-      const response = await fetch("/api/coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "feedback",
-          message: `Spoken response: ${transcribedText}`,
-        }),
-      });
-      const result = await response.json() as { content?: string; error?: string };
-      if (!response.ok) throw new Error(result.error ?? "Could not get feedback.");
-      setSpeechFeedback(result.content ?? "");
-    } catch (cause) {
-      setSpeechFeedbackError(cause instanceof Error ? cause.message : "Could not get feedback.");
-    } finally {
-      setSpeechFeedbackLoading(false);
     }
   };
 
@@ -541,25 +424,27 @@ export function PracticeControls({
           <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
         </p>
       )}
+      {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
 
-      {!isRecording && recordingUrl && !transcribing && !speechFeedbackLoading && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={transcribeAudio}
-            disabled={transcribing || speechFeedbackLoading}
-          >
-            {transcribing ? "Transcribing…" : "Transcribe speech"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={requestSpeechFeedback}
-            disabled={!transcribedText || speechFeedbackLoading || transcribing}
-          >
-            {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
-          </Button>
+      {finished && (
+        <div className="space-y-3 border-t pt-4" aria-live="polite">
+          <p className="font-medium">Time to reflect: how did that feel?</p>
+          {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
+          <div className="flex flex-wrap gap-2">
+            {RATINGS.map((rating) => (
+              <Button
+                key={rating}
+                size="sm"
+                variant={savedRating === rating ? "secondary" : "outline"}
+                aria-pressed={savedRating === rating}
+                disabled={savedRating !== null}
+                onClick={() => saveRating(rating)}
+              >
+                {rating}
+              </Button>
+            ))}
+          </div>
+          {savedRating && <p className="text-sm text-muted-foreground">Saved to your practice history.</p>}
         </div>
       )}
 
