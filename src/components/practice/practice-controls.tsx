@@ -1,5 +1,39 @@
-﻿"use client";
+  <div className="flex flex-wrap gap-2" role="group" aria-label="Speaking duration">
+    {DURATIONS.map((seconds) => (
+      <Button
+        key={seconds}
+        size="sm"
+        variant={duration === seconds ? "secondary" : "outline"}
+        aria-pressed={duration === seconds}
+        onClick={() => selectDuration(seconds)}
+      >
+        {seconds < 60 ? `${seconds}s` : `${seconds / 60} min`}
+      </Button>
+    ))}
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const minutes = Math.min(30, Math.max(1, Number(customMinutes) || 1));
+        setCustomMinutes(String(minutes));
+        selectDuration(minutes * 60);
+      }}
+    >
+      <label className="sr-only" htmlFor="custom-speaking-minutes">Custom minutes</label>
+      <input
+        id="custom-speaking-minutes"
+        type="number"
+        min={1}
+        max={30}
+        value={customMinutes}
+        onChange={(event) => setCustomMinutes(event.target.value)}
+        className="h-8 w-16 rounded-md border bg-background px-2 text-sm"
+      />
+      <Button size="sm" variant="outline" type="submit">Custom</Button>
+    </form>
+  </div>
 
+<<<<<<< HEAD
       )}
 "use client";
 
@@ -12,21 +46,60 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+=======
+  <div className="flex flex-wrap items-center gap-4">
+    <output className="min-w-28 font-mono text-4xl font-semibold tabular-nums" aria-live="off">
+      {formatTime(remaining)}
+    </output>
+    <div className="flex flex-wrap gap-2">
+      {running ? (
+        <Button onClick={pause}><Pause aria-hidden /> Pause</Button>
+      ) : (
+        <Button onClick={start} disabled={starting}>
+          <Play aria-hidden /> {starting ? "Starting…" : "Start"}
+        </Button>
+      )}
+      <Button variant="outline" onClick={stop}><Square aria-hidden /> Stop</Button>
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label="Reset timer"
+        title="Reset timer"
+        onClick={reset}
+      >
+        <RotateCcw aria-hidden />
+      </Button>
+    </div>
+  </div>
+>>>>>>> 107d79a8230a688d4b5424b7b9cddb544aedf6cb
 
-const STORAGE_KEY = "deutsch-coach-practice-v1";
-const DURATIONS = [30, 60, 120, 180, 300] as const;
-const RATINGS = ["Easy", "Okay", "Difficult", "Very difficult"] as const;
+  {isRecording && (
+    <p className="flex items-center gap-2 text-sm font-medium" role="status">
+      <span className={`inline-block size-2.5 rounded-full bg-red-500 ${running ? "animate-pulse" : "opacity-50"}`} aria-hidden />
+      <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
+    </p>
+  )}
 
-export type PracticeRating = (typeof RATINGS)[number];
+  {!isRecording && recordingUrl && !speechFeedbackLoading && (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={requestSpeechFeedback}
+        disabled={speechFeedbackLoading}
+      >
+        {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
+      </Button>
+    </div>
+  )}
 
-interface SavedPractice {
-  category: string;
-  title: string;
-  seconds: number;
-  rating: PracticeRating;
-  completedAt: string;
-}
+  {speechFeedbackLoading && (
+    <p className="text-sm text-muted-foreground">
+      Getting AI feedback...<span className="animate-pulse"> …</span>
+    </p>
+  )}
 
+<<<<<<< HEAD
 interface PracticeControlsProps {
   title: string;
   category: string;
@@ -34,18 +107,22 @@ interface PracticeControlsProps {
   phrases?: readonly string[];
   initialMinutes?: number;
 }
+=======
+  {speechFeedbackError && (
+    <p className="text-sm text-destructive">{speechFeedbackError}</p>
+  )}
+>>>>>>> 107d79a8230a688d4b5424b7b9cddb544aedf6cb
 
-function speak(text: string, rate = 1) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "de-DE";
-  utterance.rate = rate;
-  window.speechSynthesis.speak(utterance);
-}
+  {speechFeedback && (
+    <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
+      <p className="mb-2 font-semibold">AI Feedback on Speech</p>
+      {speechFeedback}
+    </div>
+  )}
 
-const RECORDING_MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"] as const;
+  {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
 
+<<<<<<< HEAD
 function getSupportedMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
   return RECORDING_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
@@ -433,63 +510,32 @@ export function PracticeControls({
           <p className="text-sm text-muted-foreground">Choose a time, press Start and speak. Your voice is recorded so you can listen back.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+=======
+  {finished && (
+    <div className=space-y-3 border-t pt-4" aria-live="polite">
+      <p className="font-medium">Time to reflect: how did that feel?</p>
+      {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
+      <div className="flex flex-wrap gap-2">
+        {RATINGS.map((rating) => (
+>>>>>>> 107d79a8230a688d4b5424b7b9cddb544aedf6cb
           <Button
-            variant="outline"
+            key={rating}
             size="sm"
-            disabled={!recordingUrl || isRecording}
-            onClick={togglePlayback}
-            aria-label={isPlaying ? "Stop playing your recording" : "Play your recording"}
+            variant={savedRating === rating ? "secondary" : "outline"}
+            aria-pressed={savedRating === rating}
+            disabled={savedRating !== null}
+            onClick={() => saveRating(rating)}
           >
-            {isPlaying ? <Square aria-hidden /> : <Volume2 aria-hidden />} {isPlaying ? "Stop" : "Listen"}
-          </Button>
-          {(prompt || phrases.length > 0) && (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => hearPrompt()} aria-label="Hear the German prompt">
-                Hear prompt
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => hearPrompt(0.75)} aria-label="Hear the German prompt slowly">
-                Slow
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Speaking duration">
-        {DURATIONS.map((seconds) => (
-          <Button
-            key={seconds}
-            size="sm"
-            variant={duration === seconds ? "secondary" : "outline"}
-            aria-pressed={duration === seconds}
-            onClick={() => selectDuration(seconds)}
-          >
-            {seconds < 60 ? `${seconds}s` : `${seconds / 60} min`}
+            {rating}
           </Button>
         ))}
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const minutes = Math.min(30, Math.max(1, Number(customMinutes) || 1));
-            setCustomMinutes(String(minutes));
-            selectDuration(minutes * 60);
-          }}
-        >
-          <label className="sr-only" htmlFor="custom-speaking-minutes">Custom minutes</label>
-          <input
-            id="custom-speaking-minutes"
-            type="number"
-            min={1}
-            max={30}
-            value={customMinutes}
-            onChange={(event) => setCustomMinutes(event.target.value)}
-            className="h-8 w-16 rounded-md border bg-background px-2 text-sm"
-          />
-          <Button size="sm" variant="outline" type="submit">Custom</Button>
-        </form>
       </div>
+      {savedRating && <p className="text-sm text-muted-foreground">Saved to your practice history.</p>}
+    </div>
+  );
+}
 
+<<<<<<< HEAD
       <div className="flex flex-wrap items-center gap-4">
         <output className="min-w-28 font-mono text-4xl font-semibold tabular-nums" aria-live="off">
           {formatTime(remaining)}
@@ -563,3 +609,6 @@ export function PracticeControls({
         <p className="text-sm text-destructive">{speechFeedbackError}</p>
       )}
 
+=======
+export { speak as speakGerman };
+>>>>>>> 107d79a8230a688d4b5424b7b9cddb544aedf6cb
