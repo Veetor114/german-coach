@@ -1,0 +1,105 @@
+      {speechFeedback && (
+        <div className='whitespace-pre-wrap rounded-xl border-l-4 border-brand-teal bg-brand-teal/5 p-6'>
+          <div className='mb-4'>
+            <p className='font-semibold text-brand-teal'>AI Feedback on Speech</p>
+          </div>
+          <div className='space-y-4'>
+            {/* Corrections section */}
+            <div>
+              <h3 className='font-medium text-brand-teal mb-2'>Corrections & Improved Wording</h3>
+              <p className='text-sm'>
+                Based on your spoken German, here are suggestions for more natural expressions:
+              </p>
+              <p className='mt-2 pl-4 list-disc text-sm'>
+                ï Try using more precise vocabulary to express your ideas
+                ï Pay attention to word order in subordinate clauses
+                ï Consider using common German idioms where appropriate
+              </p>
+            </div>
+            
+            {/* Vocabulary section */}
+            <div>
+              <h3 className='font-medium text-brand-teal mb-2'>Vocabulary to Review</h3>
+              <p className='text-sm'>
+                Expand your German vocabulary with these useful words and phrases:
+              </p>
+              <p className='mt-2 pl-4 list-disc text-sm'>
+                ï nevertheless (trotzdem)
+                ï furthermore (auﬂerdem)
+                ï in summary (zusammenfassend)
+                ï for example (zum Beispiel)
+                ï in my opinion (meiner Meinung nach)
+              </p>
+            </div>
+            
+            {/* Grammar section */}
+            <div>
+              <h3 className='font-medium text-brand-teal mb-2'>Grammar Points</h3>
+              <p className='text-sm'>
+                Focus on these grammar aspects to improve your German accuracy:
+              </p>
+              <p className='mt-2 pl-4 list-disc text-sm'>
+                ï Correct use of articles (der, die, das)
+                ï Proper word order in main clauses (Subject-Verb-Object)
+                ï Accurate verb conjugation in different tenses
+                ï Proper use of cases (nominative, accusative, dative, genitive)
+              </p>
+            </div>
+            
+            {/* Ratings section */}
+            <div>
+              <h3 className='font-medium text-brand-teal mb-2'>Skill Ratings</h3>
+              <div className='grid grid-cols-2 gap-3 mt-2'>
+                <div className='flex items-center'>
+                  <span className='mr-2'>Grammar:</span>
+                  <div className='w-20 bg-gray-200 rounded-full h-2.5'>
+                    <div className='bg-brand-teal h-2.5 rounded-full' style={{ width: '80%' }}></div>
+                  </div>
+                  <span className='ml-2'>4/5</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='mr-2'>Vocabulary:</span>
+                  <div className='w-20 bg-gray-200 rounded-full h-2.5'>
+                    <div className='bg-brand-teal h-2.5 rounded-full' style={{ width: '60%' }}></div>
+                  </div>
+                  <span className='ml-2'>3/5</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='mr-2'>Fluency:</span>
+                  <div className='w-20 bg-gray-200 rounded-full h-2.5'>
+                    <div className='bg-brand-teal h-2.5 rounded-full' style={{ width: '80%' }}></div>
+                  </div>
+                  <span className='ml-2'>4/5</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='mr-2'>Naturalness:</span>
+                  <div className='w-20 bg-gray-200 rounded-full h-2.5'>
+                    <div className='bg-brand-teal h-2.5 rounded-full' style={{ width: '60%' }}></div>
+                  </div>
+                  <span className='ml-2'>3/5</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='mr-2'>Pronunciation:</span>
+                  <div className='w-20 bg-gray-200 rounded-full h-2.5'>
+                    <div className='bg-gray-300 h-2.5 rounded-full'></div>
+                  </div>
+                  <span className='ml-2'>Assess via audio</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Practice Goal section */}
+            <div>
+              <h3 className='font-medium text-brand-teal mb-2'>Next Practice Goal</h3>
+              <p className='text-sm'>
+                Focus on using more complex sentence structures with subordinate clauses 
+                (weil, obwohl, wenn) to express relationships between ideas.
+              </p>
+              <p className='mt-2 p-3 bg-brand-teal/10 rounded-md'>
+                <strong>Challenge:</strong> Record yourself explaining your opinion on a topic 
+                using at least three different conjunctions.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
