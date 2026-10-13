@@ -176,7 +176,7 @@ export function PracticeControls({
       };
 
       // Initialize speech recognition for real-time transcription
-      if (typeof window !== "undefined" && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.lang = 'de-DE';
@@ -519,4 +519,88 @@ export function PracticeControls({
             <RotateCcw aria-hidden />
           </Button>
         </div>
-      
+      </div>
+
+      {isRecording && (
+        <p className="flex items-center gap-2 text-sm font-medium" role="status">
+          <span className={`inline-block size-2.5 rounded-full bg-red-500 ${running ? "animate-pulse" : "opacity-50"}`} aria-hidden />
+          <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
+        </p>
+      )}
+
+      {!isRecording && recordingUrl && !transcribing && !speechFeedbackLoading && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={transcribeAudio}
+            disabled={transcribing || speechFeedbackLoading}
+          >
+            {transcribing ? "Transcribing…" : "Transcribe speech"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={requestSpeechFeedback}
+            disabled={!transcribedText || speechFeedbackLoading || transcribing}
+          >
+            {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
+          </Button>
+        </div>
+      )}
+
+      {transcribing && (
+        <p className="text-sm text-muted-foreground">
+          Transcribing audio...<span className="animate-pulse"> …</span>
+        </p>
+      )}
+
+      {speechFeedbackLoading && (
+        <p className="text-sm text-muted-foreground">
+          Getting AI feedback...<span className="animate-pulse"> …</span>
+        </p>
+      )}
+
+      {transcribeError && (
+        <p className="text-sm text-destructive">{transcribeError}</p>
+      )}
+
+      {speechFeedbackError && (
+        <p className="text-sm text-destructive">{speechFeedbackError}</p>
+      )}
+
+      {speechFeedback && (
+        <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
+          <p className="mb-2 font-semibold">AI Feedback on Speech</p>
+          {speechFeedback}
+        </div>
+      )}
+
+      {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
+
+      {finished && (
+        <div className=space-y-3 border-t pt-4" aria-live="polite">
+          <p className="font-medium">Time to reflect: how did that feel?</p>
+          {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
+          <div className="flex flex-wrap gap-2">
+            {RATINGS.map((rating) => (
+              <Button
+                key={rating}
+                size="sm"
+                variant={savedRating === rating ? "secondary" : "outline"}
+                aria-pressed={savedRating === rating}
+                disabled={savedRating !== null}
+                onClick={() => saveRating(rating)}
+              >
+                {rating}
+              </Button>
+            ))}
+          </div>
+          {savedRating && <p className="text-sm text-muted-foreground">Saved to your practice history.</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export { speak as speakGerman };
