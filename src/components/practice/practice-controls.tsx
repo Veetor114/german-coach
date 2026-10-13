@@ -68,6 +68,12 @@ export function PracticeControls({
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
+  const [transcribedText, setTranscribedText] = useState<string | null>(null);
+  const [speechFeedbackLoading, setSpeechFeedbackLoading] = useState(false);
+  const [speechFeedbackError, setSpeechFeedbackError] = useState<string | null>(null);
+  const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -80,14 +86,6 @@ export function PracticeControls({
   const [isPlaying, setIsPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
-
-  // Speech feedback state
-  const [transcribing, setTranscribing] = useState(false);
-  const [transcribeError, setTranscribeError] = useState<string | null>(null);
-  const [transcribedText, setTranscribedText] = useState<string | null>(null);
-  const [speechFeedbackLoading, setSpeechFeedbackLoading] = useState(false);
-  const [speechFeedbackError, setSpeechFeedbackError] = useState<string | null>(null);
-  const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
 
   const stopPlayback = useCallback(() => {
     const audio = audioRef.current;
@@ -120,6 +118,12 @@ export function PracticeControls({
 
     stopPlayback();
     chunksRef.current = [];
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setRecordingUrl(null);
+    setIsRecording(false);
   }, [stopPlayback]);
 
   // Stops recording but keeps the audio so the learner can listen back.
@@ -176,14 +180,14 @@ export function PracticeControls({
       };
 
       // Initialize speech recognition for real-time transcription
-      if (typeof window !== "undefined" && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.lang = 'de-DE';
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
 
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
+        recognition.onresult = (event) => {
           if (event.results.length > 0) {
             const transcript = event.results[0][0].transcript;
             setTranscribedText(transcript);
@@ -191,7 +195,7 @@ export function PracticeControls({
           }
         };
 
-        recognition.onerror = (event: SpeechRecognitionError) => {
+        recognition.onerror = (event) => {
           setTranscribeError(`Speech recognition error: ${event.error}`);
         };
 
@@ -256,7 +260,7 @@ export function PracticeControls({
   const start = async () => {
     const recorder = recorderRef.current;
     if (recorder?.state === "paused") {
-      resonator.resume();
+      recorder.resume();
       setRunning(true);
       return;
     }
@@ -367,7 +371,7 @@ export function PracticeControls({
       recognition.maxAlternatives = 1;
 
       return new Promise<string | null>((resolve, reject) => {
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
+        recognition.onresult = (event) => {
           if (event.results.length > 0) {
             const transcript = event.results[0][0].transcript;
             resolve(transcript);
@@ -376,7 +380,7 @@ export function PracticeControls({
           }
         };
 
-        recognition.onerror = (event: SpeechRecognitionError) => {
+        recognition.onerror = (event) => {
           reject(new Error(`Speech recognition error: ${event.error}`));
         };
 
