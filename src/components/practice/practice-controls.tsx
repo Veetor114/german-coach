@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
@@ -24,6 +24,16 @@ interface PracticeControlsProps {
   prompt?: string;
   phrases?: readonly string[];
   initialMinutes?: number;
+}
+interface SpeechFeedbackObject {
+  corrections: string;
+  vocabulary: string;
+  grammar: string;
+  grammarRating: number;
+  vocabularyRating: number;
+  fluencyRating: number;
+  naturalnessRating: number;
+  nextGoal: string;
 }
 
 function speak(text: string, rate = 1) {
@@ -576,35 +586,65 @@ export function PracticeControls({
       {speechFeedback && (
         <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
           <p className="mb-2 font-semibold">AI Feedback on Speech</p>
-          {speechFeedback}
+          {typeof speechFeedback === 'string' && speechFeedback.trim().startsWith('{') ? (
+            <>
+              {() => {
+                try {
+                  const parsed = JSON.parse(speechFeedback) as SpeechFeedbackObject;
+                  return (
+                    <>
+                      {/* Corrections & Improved Wording */}
+                      {parsed.corrections && (
+                        <>
+                          <p className="font-medium text-brand-teal">Corrections & Improved Wording</p>
+                          <p className="text-sm">{parsed.corrections}</p>
+                        </>
+                      )}
+                      {/* Vocabulary to Review */}
+                      {parsed.vocabulary && (
+                        <>
+                          <p className="font-medium text-brand-teal">Vocabulary to Review</p>
+                          <p className="text-sm">{parsed.vocabulary}</p>
+                        </>
+                      )}
+                      {/* Grammar Points */}
+                      {parsed.grammar && (
+                        <>
+                          <p className="font-medium text-brand-teal">Grammar Points</p>
+                          <p className="text-sm">{parsed.grammar}</p>
+                        </>
+                      )}
+                      {/* Skill Ratings */}
+                      <div>
+                        <p className="font-medium text-brand-teal">Skill Ratings</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>Grammar: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
+                          <div>Vocabulary: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
+                          <div>Fluency: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
+                          <div>Naturalness: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
+                          <div>Pronunciation: Assess via audio</div>
+                        </div>
+                      </div>
+                      {/* Next Practice Goal */}
+                      {parsed.nextGoal && (
+                        <>
+                          <p className="font-medium text-brand-teal">Next Practice Goal</p>
+                          <p className="text-sm">{parsed.nextGoal}</p>
+                        </>
+                      )}
+                    </>
+                  );
+                } catch (e) {
+                  // If parsing fails, show the string
+                  return <p>{speechFeedback}</p>;
+                }
+              }}()
+            </>
+          ) : (
+            // Show the string as before
+            <p>{speechFeedback}</p>
+          )}
         </div>
       )}
-
-      {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
-
-      {finished && (
-        <div className="space-y-3 border-t pt-4" aria-live="polite">
-          <p className="font-medium">Time to reflect: how did that feel?</p>
-          {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
-          <div className="flex flex-wrap gap-2">
-            {RATINGS.map((rating) => (
-              <Button
-                key={rating}
-                size="sm"
-                variant={savedRating === rating ? "secondary" : "outline"}
-                aria-pressed={savedRating === rating}
-                disabled={savedRating !== null}
-                onClick={() => saveRating(rating)}
-              >
-                {rating}
-              </Button>
-            ))}
-          </div>
-          {savedRating && <p className="text-sm text-muted-foreground">Saved to your practice history.</p>}
-        </div>
-      )}
-    </section>
-  );
-}
 
 export { speak as speakGerman };
