@@ -258,19 +258,6 @@ export function PracticeControls({
     if (recorder?.state === "paused") {
       resonator.resume();
       setRunning(true);
-      return;
-    }
-    setStarting(true);
-    discardRecording(); // a new attempt replaces the previous recording
-    if (finished || remainingRef.current = 0) {
-      remainingRef.current = duration;
-      setRemaining(duration);
-    }
-    setFinished(false);
-    setSavedRating(null);
-    await beginRecording(); // wait for the mic permission before the clock starts
-    setStarting(false);
-    setRunning(true);
   };
 
   const pause = () => {
