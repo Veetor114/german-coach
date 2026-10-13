@@ -1,5 +1,14 @@
 ﻿"use client";
 
+      )}
+"use client";
+
+      )}
+"use client";
+
+      )}
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Pause, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,16 +33,6 @@ interface PracticeControlsProps {
   prompt?: string;
   phrases?: readonly string[];
   initialMinutes?: number;
-}
-interface SpeechFeedbackObject {
-  corrections: string;
-  vocabulary: string;
-  grammar: string;
-  grammarRating: number;
-  vocabularyRating: number;
-  fluencyRating: number;
-  naturalnessRating: number;
-  nextGoal: string;
 }
 
 function speak(text: string, rate = 1) {
@@ -78,9 +77,6 @@ export function PracticeControls({
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
-  const [transcribing, setTranscribing] = useState(false);
-  const [transcribeError, setTranscribeError] = useState<string | null>(null);
-  const [transcribedText, setTranscribedText] = useState<string | null>(null);
   const [speechFeedbackLoading, setSpeechFeedbackLoading] = useState(false);
   const [speechFeedbackError, setSpeechFeedbackError] = useState<string | null>(null);
   const [speechFeedback, setSpeechFeedback] = useState<string | null>(null);
@@ -200,7 +196,6 @@ export function PracticeControls({
         recognition.onresult = (event) => {
           if (event.results.length > 0) {
             const transcript = event.results[0][0].transcript;
-            setTranscribedText(transcript);
             setTranscribeError(null);
           }
         };
@@ -303,7 +298,6 @@ export function PracticeControls({
     setSavedRating(null);
 
     // Clear transcribed text and speech recognition state
-    setTranscribedText(null);
     setTranscribeError(null);
     setSpeechFeedback(null);
     setSpeechFeedbackError(null);
@@ -359,19 +353,6 @@ export function PracticeControls({
     }
   };
 
-  const transcribeAudio = async () => {
-    if (!recordingUrl || transcribing) return;
-
-    setTranscribing(true);
-    setTranscribeError(null);
-    setTranscribedText(null);
-
-    try {
-      if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
-        setTranscribeError('Speech recognition is not supported in this browser.');
-        setTranscribing(false);
-        return;
-      }
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
@@ -412,7 +393,6 @@ export function PracticeControls({
     } catch (error) {
       setTranscribeError(error instanceof Error ? error.message : String(error));
       setTranscribing(false);
-      setTranscribedText(null);
     }
   };
 
@@ -519,7 +499,7 @@ export function PracticeControls({
             <Button onClick={pause}><Pause aria-hidden /> Pause</Button>
           ) : (
             <Button onClick={start} disabled={starting}>
-              <Play aria-hidden /> {starting ? "Starting…" : "Start"}
+              <Play aria-hidden /> {starting ? "Startingâ€¦" : "Start"}
             </Button>
           )}
           <Button variant="outline" onClick={stop}><Square aria-hidden /> Stop</Button>
@@ -538,7 +518,7 @@ export function PracticeControls({
       {isRecording && (
         <p className="flex items-center gap-2 text-sm font-medium" role="status">
           <span className={`inline-block size-2.5 rounded-full bg-red-500 ${running ? "animate-pulse" : "opacity-50"}`} aria-hidden />
-          <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
+          <Mic className="size-4" aria-hidden /> {running ? "Recordingâ€¦" : "Recording paused"}
         </p>
       )}
 
@@ -550,7 +530,7 @@ export function PracticeControls({
             onClick={transcribeAudio}
             disabled={transcribing || speechFeedbackLoading}
           >
-            {transcribing ? "Transcribing…" : "Transcribe speech"}
+            {transcribing ? "Transcribingâ€¦" : "Transcribe speech"}
           </Button>
           <Button
             variant="outline"
@@ -558,20 +538,20 @@ export function PracticeControls({
             onClick={requestSpeechFeedback}
             disabled={!transcribedText || speechFeedbackLoading || transcribing}
           >
-            {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
+            {speechFeedbackLoading ? "Getting feedbackâ€¦" : "Get AI feedback"}
           </Button>
         </div>
       )}
 
       {transcribing && (
         <p className="text-sm text-muted-foreground">
-          Transcribing audio...<span className="animate-pulse"> …</span>
+          Transcribing audio...<span className="animate-pulse"> â€¦</span>
         </p>
       )}
 
       {speechFeedbackLoading && (
         <p className="text-sm text-muted-foreground">
-          Getting AI feedback...<span className="animate-pulse"> …</span>
+          Getting AI feedback...<span className="animate-pulse"> â€¦</span>
         </p>
       )}
 
@@ -583,68 +563,3 @@ export function PracticeControls({
         <p className="text-sm text-destructive">{speechFeedbackError}</p>
       )}
 
-      {speechFeedback && (
-        <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
-          <p className="mb-2 font-semibold">AI Feedback on Speech</p>
-          {typeof speechFeedback === 'string' && speechFeedback.trim().startsWith('{') ? (
-            <>
-              {() => {
-                try {
-                  const parsed = JSON.parse(speechFeedback) as SpeechFeedbackObject;
-                  return (
-                    <>
-                      {/* Corrections & Improved Wording */}
-                      {parsed.corrections && (
-                        <>
-                          <p className="font-medium text-brand-teal">Corrections & Improved Wording</p>
-                          <p className="text-sm">{parsed.corrections}</p>
-                        </>
-                      )}
-                      {/* Vocabulary to Review */}
-                      {parsed.vocabulary && (
-                        <>
-                          <p className="font-medium text-brand-teal">Vocabulary to Review</p>
-                          <p className="text-sm">{parsed.vocabulary}</p>
-                        </>
-                      )}
-                      {/* Grammar Points */}
-                      {parsed.grammar && (
-                        <>
-                          <p className="font-medium text-brand-teal">Grammar Points</p>
-                          <p className="text-sm">{parsed.grammar}</p>
-                        </>
-                      )}
-                      {/* Skill Ratings */}
-                      <div>
-                        <p className="font-medium text-brand-teal">Skill Ratings</p>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>Grammar: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
-                          <div>Vocabulary: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
-                          <div>Fluency: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
-                          <div>Naturalness: <div className="w-full h-2 bg-gray-200 rounded"><div className="h-2 bg-brand-teal rounded w-[{}%]"></div></div></div>
-                          <div>Pronunciation: Assess via audio</div>
-                        </div>
-                      </div>
-                      {/* Next Practice Goal */}
-                      {parsed.nextGoal && (
-                        <>
-                          <p className="font-medium text-brand-teal">Next Practice Goal</p>
-                          <p className="text-sm">{parsed.nextGoal}</p>
-                        </>
-                      )}
-                    </>
-                  );
-                } catch (e) {
-                  // If parsing fails, show the string
-                  return <p>{speechFeedback}</p>;
-                }
-              }}()
-            </>
-          ) : (
-            // Show the string as before
-            <p>{speechFeedback}</p>
-          )}
-        </div>
-      )}
-
-export { speak as speakGerman };
