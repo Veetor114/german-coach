@@ -66,7 +66,7 @@ export function PracticeControls({
   const remainingRef = useRef(initialSeconds);
   const [customMinutes, setCustomMinutes] = useState(String(initialMinutes));
   const [running, setRunning] = useState(false);
-  [finished, setFinished] = useState(false);
+  const [finished, setFinished] = useState(false);
   const [savedRating, setSavedRating] = useState<PracticeRating | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -77,7 +77,7 @@ export function PracticeControls({
   const urlRef = useRef<string | null>(null);
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [starting, setStarting] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
 
@@ -256,7 +256,7 @@ export function PracticeControls({
   const start = async () => {
     const recorder = recorderRef.current;
     if (recorder?.state === "paused") {
-      recorder.resume();
+      resonator.resume();
       setRunning(true);
       return;
     }
@@ -519,88 +519,4 @@ export function PracticeControls({
             <RotateCcw aria-hidden />
           </Button>
         </div>
-      </div>
-
-      {isRecording && (
-        <p className="flex items-center gap-2 text-sm font-medium" role="status">
-          <span className={`inline-block size-2.5 rounded-full bg-red-500 ${running ? "animate-pulse" : "opacity-50"}`} aria-hidden />
-          <Mic className="size-4" aria-hidden /> {running ? "Recording…" : "Recording paused"}
-        </p>
-      )}
-
-      {!isRecording && recordingUrl && !transcribing && !speechFeedbackLoading && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={transcribeAudio}
-            disabled={transcribing || speechFeedbackLoading}
-          >
-            {transcribing ? "Transcribing…" : "Transcribe speech"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={requestSpeechFeedback}
-            disabled={!transcribedText || speechFeedbackLoading || transcribing}
-          >
-            {speechFeedbackLoading ? "Getting feedback…" : "Get AI feedback"}
-          </Button>
-        </div>
-      )}
-
-      {transcribing && (
-        <p className="text-sm text-muted-foreground">
-          Transcribing audio...<span className="animate-pulse"> …</span>
-        </p>
-      )}
-
-      {speechFeedbackLoading && (
-        <p className="text-sm text-muted-foreground">
-          Getting AI feedback...<span className="animate-pulse"> …</span>
-        </p>
-      )}
-
-      {transcribeError && (
-        <p className="text-sm text-destructive">{transcribeError}</p>
-      )}
-
-      {speechFeedbackError && (
-        <p className="text-sm text-destructive">{speechFeedbackError}</p>
-      )}
-
-      {speechFeedback && (
-        <div className="whitespace-pre-wrap rounded-md border-l-4 border-brand-teal bg-muted/60 p-4">
-          <p className="mb-2 font-semibold">AI Feedback on Speech</p>
-          {speechFeedback}
-        </div>
-      )}
-
-      {recordError && <p className="text-sm text-destructive" role="alert">{recordError}</p>}
-
-      {finished && (
-        <div className="space-y-3 border-t pt-4" aria-live="polite">
-          <p className="font-medium">Time to reflect: how did that feel?</p>
-          {recordingUrl && <p className="text-sm text-muted-foreground">Press Listen above to hear your recording.</p>}
-          <div className="flex flex-wrap gap-2">
-            {RATINGS.map((rating) => (
-              <Button
-                key={rating}
-                size="sm"
-                variant={savedRating === rating ? "secondary" : "outline"}
-                aria-pressed={savedRating === rating}
-                disabled={savedRating !== null}
-                onClick={() => saveRating(rating)}
-              >
-                {rating}
-              </Button>
-            ))}
-          </div>
-          {savedRating && <p className="text-sm text-muted-foreground">Saved to your practice history.</p>}
-        </div>
-      )}
-    </section>
-  );
-}
-
-export { speak as speakGerman };
+      .-```
